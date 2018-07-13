@@ -1,0 +1,225 @@
+import tweepy
+from tweepy import OAuthHandler
+import json
+import pandas as pd
+import time
+
+
+# keys and tokens from the Twitter Dev Console
+consumer_key = 'IH9MWzcbspudT3HMvA7HJn3dH'
+consumer_secret = 'hRWUjrBDxtOP3rsuDEDjrBEe43Z432UQMUth7ITufUCUKm8ClV'
+access_token = '280319758-LT7jc6YstTYjiQ3JRFv5Y9mnrOEm1Y2sufx0Z8Jy'
+access_token_secret = 'XvTifG93Zb47rl86vLup2Vb68zZfuvAUEk5FUwHUwmNny'
+
+try:
+    print("Connecting to Twitter.....\n")
+    auth = OAuthHandler(consumer_key, consumer_secret)
+    auth.secure = True
+    auth.set_access_token(access_token, access_token_secret)
+    api = tweepy.API(auth)
+    print("***Connection Successful***\n")
+except:
+    print("Error: Authentication Failed")
+
+# Fetch Search Terms from CSV file
+print("\n Reading Keywords to search on Twitter \n ")
+filePath = "C:\\Users\\chiku\\Desktop\\Pushkar Projects\\R Professor\\Project Files\\keywords.csv"
+keywords = pd.read_csv(filePath)
+print("\n Searcing tweets for following keywords \n")
+keys = keywords['Keywords']
+for i in keys:
+    print(i)
+
+"""
+#Structure of api search : https://gist.github.com/dev-techmoe/ef676cdd03ac47ac503e856282077bf2
+
+#print ("\n Extracting 1 sample tweet for each keyword\n")
+
+tweets=[]
+for i in keys:
+    for tweet in tweepy.Cursor(api.search,
+                               q=i,
+                               rpp=1,
+                               #result_type="recent",
+                               tweet_mode='extended',
+                               include_entities=True,
+                               lang="en").items(1):
+               print ('\n \n AuthorID: '+ str(tweet.author.id_str)+'\n',
+               'Author Screen Name: '+ str(tweet.author.screen_name)+'\n',
+               'Tweet Id: '+str(tweet.id)+'\n',
+               'Tweet: '+str(tweet.full_text.encode('UTF-8')))
+             
+   # tweets.append(tweet._json)
+
+"""
+#keys = ["fifa","worldcup2018"]
+tweets=[]
+counter = 1
+for i in keys:
+    while True:
+        try:
+            print("\nSearching tweets for "+i)
+            tweets = [tweet._json for tweet in tweepy.Cursor(api.search,
+                                       q = str(i),
+                                       tweet_mode="extended",
+                                       result_type="recent",
+                                       rpp=2,
+                                       include_entities=True,
+                                       lang="en").items(50)]
+            break   
+        except tweepy.TweepError as e:
+            print(e)
+            print("Twitter is bugged with too many requests at this moment. The code will retry after 20 sec")
+            counter = counter+1
+            time.sleep(20)
+            if(counter == 3):
+                print("The code tried thrice but it seems your request limit is exhausted. Please try after 15 min")
+                exit()
+            continue
+          
+    print("Writing Tweets to JSON file") 
+    with open('tweets_'+str(i)+'.txt', 'w') as file:
+            file.write(json.dumps(tweets,indent=4)) 
+
+    print("Getting tweets into dataframe")
+    tweets = []
+    with open('tweets_'+str(i)+'.txt', encoding='utf-8') as json_file:  
+        data = json.load(json_file)
+    
+        for tweet in data:
+            tweet_id = tweet['id']
+            created_at = tweet['created_at']
+            user_id = tweet['user']['id']
+            screen_name = tweet['user']['screen_name']
+            text = tweet['full_text']
+            source = tweet['source']
+            reply_to_status_id = tweet['in_reply_to_status_id']
+            reply_to_user_id = tweet['in_reply_to_user_id']
+            reply_to_screen_name = tweet['in_reply_to_screen_name']
+            is_quote = tweet['is_quote_status']
+            is_retweet = tweet['retweeted']
+            favorite_count = tweet['favorite_count']
+            retweet_count = tweet['retweet_count']
+            hashtags = tweet['entities']['hashtags']['text']
+            #symbols = tweet['entities']['symbols']
+##            #urls_url = tweet['entities']['urls']['display_url']
+##            urls_url = tweet['entities'][2][2]
+##            #urls_t_co = tweet['entities']['urls']['url']
+##            #urls_expanded_url = tweet['entities']['urls']['expanded_url']
+##            #media_url = tweet['media']['media_url']
+##            #media_t.co = tweet['media']['url']
+##            #media_expanded_url = ['media']['expanded_url']
+##            media_type = ['media']['type']
+##            #ext_media_url = ['extended_entities']['media']['media_url_https']
+##            #ext_media_t.co = tweet ['extended_entities']['media']['url']
+##            #ext_media_expanded_url = ['extended_entities']['media']['expanded_url']
+##            ext_media_type = ['extended_entities']['media']['type']
+##            mentions_user_id = ['entities']['user_mentions']['id']
+##            mentions_screen_name = ['entities']['user_mentions']['screen_name']
+##            lang = tweet['metadata']['iso_language_code']
+##            quoted_status_id = tweet['retweeted_status']['quoted_status']['id']
+##            quoted_text = tweet['retweeted_status']['quoted_status']['full_text']
+##            retweet_status_id = tweet['retweeted_status']['id']
+##            retweet_text = tweet['retweeted_status']['full_text']
+##            #place_url = tweet['place']['url']
+##            place_name = tweet['place']['name']
+##            place_full_name = tweet['place']['full_name']
+##            place_type = tweet['place']['place_type']
+##            country = tweet['place']['country']
+##            country_code = tweet['place']['country_code']
+##            geo_coords = tweet['geo']['coordinates']
+##            coords_coords = tweet['coordinates']['coordinates']
+##            bbox_coords = tweet['place']['bounding_box']['coordinates']
+ 
+            tweets.append({'tweet_id': str(tweet_id),
+                            'created_at': created_at,
+                            'user_id' : int(user_id),
+                            'screen_name' : str(screen_name),
+                            'text': str(text),
+                            'source':str(source),
+                            'reply_to_status_id' : reply_to_status_id,
+                            'reply_to_user_id' : reply_to_user_id,
+                            'reply_to_screen_name' : str(reply_to_screen_name),
+                            'is_quote' : str(is_quote),
+                            'is_retweet' : str(is_retweet),
+                            'favorite_count': int(favorite_count),
+                            'retweet_count': int(retweet_count),
+                            'hashtags' : hashtags,
+                            #'symbols' : symbols,
+##                            'urls_url' : str(urls_url),
+##                            #'urls_t.co' : str(urls_t_co),
+##                            #'urls_expanded_url' : str(urls_expanded_url),
+##                            #'media_url' : str(media_url),
+##                            #'media_t.co' : str(media_t.co),
+##                            #'media_expanded_url' : str(media_expanded_url),
+##                            'media_type' : str(media_type),
+##                            #'ext_media_url' : str(ext_media_url),
+##                            #'ext_media_t.co' : str(ext_media_t.co),
+##                            #'ext_media_expanded_url' : str(ext_media_expanded_url),
+##                            'ext_media_type': str(ext_media_type),
+##                            'mentions_user_id' : int(mentions_user_id),
+##                            'mentions_screen_name' : str(mentions_screen_name),
+##                            'lang' : str(lang),
+##                            'quoted_status_id': quoted_status_id,
+##                            'quoted_text' : str(quoted_text),
+##                            'retweet_status_id' : int(retweet_status_id),
+##                            'retweet_text' : str(retweet_text),
+##                            #'place_url': str(place_url),
+##                            'place_name' : str(place_name),
+##                            'place_full_name': str(place_full_name),
+##                            'place_type':str(place_type),
+##                            'country' : str(country),
+##                            'country_code' : str(country_code),
+##                            'geo_coords' : geo_coords,
+##                            'coords_coords' : coords_coords,
+##                            'bbox_coords' : bbox_coords
+                           })
+            #print(tweets)
+            tweetDf = pd.DataFrame(tweets, columns = 
+                                      ['tweet_id',
+                                       'created_at',
+                                       'user_id',
+                                       'screen_name',
+                                       'text', 
+                                       'source',
+                                       'reply_to_status_id',
+                                       'reply_to_user_id',
+                                       'reply_to_screen_name',
+                                       'is_quote',
+                                       'is_retweet',
+                                       'favorite_count', 
+                                       'retweet_count',
+                                       'hashtags',
+                                       #'symbols',
+##                                       'urls_url',
+##                                       #'urls_t.co',
+##                                       #'urls_expanded_url',
+##                                       #'media_url',
+##                                       #'media_t.co',
+##                                       #'media_expanded_url',
+##                                       'media_type',
+##                                       #'ext_media_url',
+##                                       #'ext_media_t.co',
+##                                       #'ext_media_expanded_url',
+##                                       'ext_media_type',
+##                                       'mentions_user_id',
+##                                       'mentions_screen_name',
+##                                       'lang',
+##                                       'quoted_status_id',
+##                                       'quoted_text',
+##                                       'retweet_status_id',
+##                                       'retweet_text',
+##                                       #'place_url',
+##                                       'place_name',
+##                                       'place_full_name',
+##                                       'place_type',
+##                                       'country',
+##                                       'country_code',
+##                                       'geo_coords',
+##                                       'coords_coords',
+##                                       'bbox_coords'
+                                       ])
+
+    print("Output to CSV")
+    tweetDf.to_csv('tweetscsv_'+str(i)+'.csv')
+
