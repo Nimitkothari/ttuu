@@ -1,0 +1,36 @@
+import pandas as pd
+excel = pd.ExcelFile("./job_description.xlsx")
+print(excel.sheet_names)
+model = excel.parse("job_description")
+df= model['job_description'].map(lambda x: x .lower())
+print(df.head())
+skills = pd.read_csv('./skill_dictionary.csv')
+
+df1 = df [:11]
+skills1 = skills[:5]
+
+def assign(skills):
+    indexList = []
+    skillIndex = []
+    skillDict = {}
+    print("inside assign")
+    #print(x)
+    for skill in skills:
+        for index, row in df1.items():
+
+            print("Hi ",skill)
+
+            if skill in row:
+                print(skill)
+                #print("row no",index)
+                skillIndex.append(index)
+                print(skillIndex)
+
+            skillDict.update({skill:skillIndex})
+            print("here dict",skillDict)
+
+    return 1
+
+skillList = skills1['skills'].tolist()
+skillsVectors = assign(skillList)
+print(skillsVectors)
